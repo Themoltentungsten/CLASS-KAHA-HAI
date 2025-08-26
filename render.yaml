@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: cvrgu-classbot
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python webhook_main.py"
+    healthCheckPath: "/"
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false   # set in dashboard
+      - key: WEBHOOK_URL
+        value: "https://cvrgu-classbot.onrender.com/webhook"  # update after first deploy
