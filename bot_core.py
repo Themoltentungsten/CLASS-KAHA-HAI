@@ -70,7 +70,6 @@ SCHEDULE: Dict[int, List[Optional[ClassEntry]]] = {
         ClassEntry("CDT", "Chutti"),
     ],
     3: [  # THU
-        ClassEntry("WT (Oracle Lab)", "Oracle Lab"),
         ClassEntry("WT", "Oracle Lab"),
         ClassEntry("AIML LAB", "Oracle Lab"),
         ClassEntry("AIML LAB", "Oracle Lab"),
@@ -226,7 +225,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*Commands*\n\n"
         "• /today – today’s timetable\n"
         "• /next – next class from now\n"
-        "• /subscribe – reminders 10 min before each remaining class today\n"
+        "• /subscribe – reminders 10 min before each class today\n"
         "• /tomorrow – tomorrow’s timetable\n"
         "• /week – week at a glance\n"
         "• /announce <msg> – admin broadcast\n"
@@ -410,4 +409,5 @@ async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
     await update.message.reply_text(f"Announcement sent to {sent} chat(s).")
+
 
