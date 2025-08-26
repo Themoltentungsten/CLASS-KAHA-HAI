@@ -104,7 +104,8 @@ FACULTY = {
 DEVELOPER_TEXT = (
     "*Developer:* @Moltentungsten (Yash Kumar Raut)\n"
     "Timetable: CVRGU, Group-7, Sem-5.\n"
-    "Dept. Coordinator: Dr. B.N. Behera; University Coordinator: Dr. G. Mohanta."
+    "Dept. Coordinator: Dr. B.N. Behera.\n"
+    "University Coordinator: Dr. G. Mohanta."
 )
 
 # ===== Admins (fill with your Telegram numeric user IDs) =====
@@ -195,7 +196,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*Welcome!* You are registered under *Group-7*.\n\n"
         "• /today – today’s timetable\n"
         "• /next – next class from now\n"
-        "• /subscribe – reminders 10 min before each remaining class today\n"
+        "• /subscribe – reminders 10 min before each class today\n"
         "• /tomorrow – tomorrow’s timetable\n"
         "• /week – week at a glance\n"
         "• /setgroup <name> – change group\n"
@@ -409,3 +410,4 @@ async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
     await update.message.reply_text(f"Announcement sent to {sent} chat(s).")
+
