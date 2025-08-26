@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple, Set
 import zoneinfo
 
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.constants import ParseMode
 from telegram.ext import (
     ContextTypes, CallbackContext, MessageHandler, CommandHandler, filters,
 )
@@ -13,7 +14,7 @@ from telegram.ext import (
 TIMEZONE = zoneinfo.ZoneInfo("Asia/Kolkata")  # IST
 
 # Academic day boundaries & lunch
-EARLY_OPEN = time(9, 0, tzinfo=TIMEZONE)     # NEW: we treat 9:00–9:30 as “pre-class window”
+EARLY_OPEN = time(9, 0, tzinfo=TIMEZONE)     # treat 9:00–9:30 as pre-class window
 COLLEGE_OPEN = time(9, 30, tzinfo=TIMEZONE)
 COLLEGE_CLOSE = time(17, 30, tzinfo=TIMEZONE)
 LUNCH_FROM = time(13, 30, tzinfo=TIMEZONE)
@@ -39,8 +40,7 @@ class ClassEntry:
 # -----------------------------
 # WEEK SCHEDULE (7 slots/day)
 # -----------------------------
-# IMPORTANT: each day MUST have EXACTLY 7 entries (None allowed).
-# I normalized your table to 7 slots / day and placed labs into proper 2–3 slot spans where relevant.
+# Each day MUST have exactly 7 entries (None allowed).
 SCHEDULE: Dict[int, List[Optional[ClassEntry]]] = {
     0: [  # MON
         ClassEntry("DMDW", "BS-102"),
@@ -102,46 +102,66 @@ FACULTY = {
 }
 
 DEVELOPER_TEXT = (
-    "Developer: @Moltentungsten (Yash Kumar Raut)\n"
+    "*Developer:* @Moltentungsten (Yash Kumar Raut)\n"
     "Timetable: CVRGU, Group-7, Sem-5.\n"
-    "Dept. Coordinator: Dr. B.N. Behera.\n"
-    "University Coordinator: Dr. G. Mohanta."
+    "Dept. Coordinator: Dr. B.N. Behera; University Coordinator: Dr. G. Mohanta."
 )
 
 # ===== Admins (fill with your Telegram numeric user IDs) =====
-ADMIN_IDS: Set[int] = {
-    1255061320
-}
+ADMIN_IDS: Set[int] = {1255061320}
 
 # Track chats we can broadcast to (users or groups that interacted)
 KNOWN_CHATS: Set[int] = set()
 
-# ================= Utilities =================
+# ================ Pretty helpers ================
 def ist_now() -> datetime:
     return datetime.now(TIMEZONE)
 
 def slot_index_for(now: Optional[datetime] = None) -> Optional[int]:
-    """Return the index of the current slot, or None if we're between slots/lunch/before first/after last."""
     now = now or ist_now()
     for i, (start, end) in enumerate(SLOTS):
         if start <= now.timetz() < end:
             return i
     return None
 
-def _day_slot_start(dt: datetime, slot_idx: int) -> datetime:
-    return datetime.combine(dt.date(), SLOTS[slot_idx][0]).replace(tzinfo=TIMEZONE)
+def pretty_slot_label(start: time, end: time) -> str:
+    return f"🕒 *{start.strftime('%H:%M')}–{end.strftime('%H:%M')}*"
+
+def pretty_entry(entry: ClassEntry) -> str:
+    sub_key = entry.subject.split()[0]
+    teacher = FACULTY.get(sub_key)
+    t = f"\n    👨‍🏫 {teacher}" if teacher else ""
+    return f"📘 {entry.subject} @ {entry.room}{t}"
+
+def day_schedule(group: str, day_idx: int) -> str:
+    """Return a nicely formatted schedule for a day (with a lunch line)."""
+    parts: List[str] = []
+    for i, (start, end) in enumerate(SLOTS):
+        entry = SUPPORTED_GROUPS[group][day_idx][i]
+        if entry:
+            parts.append(f"{pretty_slot_label(start, end)}\n{pretty_entry(entry)}")
+        else:
+            parts.append(f"{pretty_slot_label(start, end)}\n— Free —")
+        if i == 3:
+            parts.append("🍴 *13:30–14:30: Lunch Break*")
+    return "\n\n".join(parts)
+
+def current_class(group: str, now: Optional[datetime] = None) -> Optional[ClassEntry]:
+    now = now or ist_now()
+    idx = slot_index_for(now)
+    if idx is None:
+        return None
+    schedule = SUPPORTED_GROUPS.get(group)
+    if not schedule:
+        return None
+    return schedule[now.weekday()][idx]
 
 def next_class(group: str, now: Optional[datetime] = None) -> Optional[Tuple[datetime, ClassEntry]]:
-    """
-    Robust next-class finder:
-    - Works during lunch or between slots.
-    - Scans from 'now' forward (today then upcoming days).
-    """
+    """Robust next-class finder across lunch, gaps, and day rolls."""
     now = now or ist_now()
     schedule = SUPPORTED_GROUPS.get(group)
     if not schedule:
         return None
-
     for dshift in range(0, 7):
         day_idx = (now.weekday() + dshift) % 7
         base_date = now.date() + timedelta(days=dshift)
@@ -154,36 +174,6 @@ def next_class(group: str, now: Optional[datetime] = None) -> Optional[Tuple[dat
                 return start_dt, entry
     return None
 
-def current_class(group: str, now: Optional[datetime] = None) -> Optional[ClassEntry]:
-    now = now or ist_now()
-    idx = slot_index_for(now)
-    if idx is None:
-        return None
-    schedule = SUPPORTED_GROUPS.get(group)
-    if not schedule:
-        return None
-    return schedule[now.weekday()][idx]
-
-def format_entry(entry: ClassEntry) -> str:
-    sub_key = entry.subject.split()[0]
-    teacher = FACULTY.get(sub_key)
-    t_str = f"\nFaculty: {teacher}" if teacher else ""
-    return f"{entry.subject} @ {entry.room}{t_str}"
-
-def day_schedule(group: str, day_idx: int) -> str:
-    """Pretty list with a lunch line inserted after the 4th slot."""
-    lines = []
-    for i, (start, end) in enumerate(SLOTS):
-        entry = SUPPORTED_GROUPS[group][day_idx][i]
-        label = f"{start.strftime('%H:%M')}–{end.strftime('%H:%M')}"
-        if entry:
-            lines.append(f"{label}: {format_entry(entry)}")
-        else:
-            lines.append(f"{label}: —")
-        if i == 3:  # after 12:30–13:30 slot
-            lines.append("13:30–14:30: Lunch Break")
-    return "\n".join(lines)
-
 # ================= Persistence =================
 USER_GROUP: Dict[int, str] = {}
 
@@ -194,46 +184,55 @@ MAIN_KEYBOARD = ReplyKeyboardMarkup(
 )
 
 async def _remember_chat(update: Update):
-    chat_id = update.effective_chat.id
-    KNOWN_CHATS.add(chat_id)
+    KNOWN_CHATS.add(update.effective_chat.id)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
     user = update.effective_user
     if user and user.id not in USER_GROUP:
         USER_GROUP[user.id] = "Group-7"
-    await update.message.reply_text(
-        "Welcome! You are registered under Group-7.\n"
-        "Use the buttons below or commands:\n"
-        "• /today\n • /next\n • /subscribe\n • /announce (admin)\n • /tomorrow\n • /week\n • /setgroup\n • /help",
-        reply_markup=MAIN_KEYBOARD
+    text = (
+        "*Welcome!* You are registered under *Group-7*.\n\n"
+        "• /today – today’s timetable\n"
+        "• /next – next class from now\n"
+        "• /subscribe – reminders 10 min before each remaining class today\n"
+        "• /tomorrow – tomorrow’s timetable\n"
+        "• /week – week at a glance\n"
+        "• /setgroup <name> – change group\n"
+        "• /announce <msg> – admin broadcast\n"
+        "• /help – command list"
     )
+    await update.message.reply_text(text, reply_markup=MAIN_KEYBOARD, parse_mode=ParseMode.MARKDOWN)
 
 async def setgroup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
     if not context.args:
-        await update.message.reply_text("Usage: /setgroup Group-7")
+        await update.message.reply_text("*Usage:* /setgroup Group-7", parse_mode=ParseMode.MARKDOWN)
         return
     group = " ".join(context.args)
     if group not in SUPPORTED_GROUPS:
-        await update.message.reply_text(f"Unknown group '{group}'. Supported: {', '.join(SUPPORTED_GROUPS.keys())}")
+        await update.message.reply_text(
+            f"Unknown group '{group}'. Supported: {', '.join(SUPPORTED_GROUPS.keys())}",
+            parse_mode=ParseMode.MARKDOWN,
+        )
         return
     USER_GROUP[update.effective_user.id] = group
-    await update.message.reply_text(f"Updated your group to {group}.")
+    await update.message.reply_text(f"Updated your group to *{group}*.", parse_mode=ParseMode.MARKDOWN)
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
-    await update.message.reply_text(
-        "/start – register & menu\n"
-        "/today – today's schedule\n"
-        "/next – next class from now\n"
-        "/subscribe – 10-min reminders before each remaining class today\n"
-        "/tomorrow – tomorrow's schedule\n"
-        "/week – week at a glance\n"
-        "/announce <msg> – admin broadcast\n"
-        "/setgroup <name> – change your group\n"
-        "/help – this help"
+    text = (
+        "*Commands*\n\n"
+        "• /today – today’s timetable\n"
+        "• /next – next class from now\n"
+        "• /subscribe – reminders 10 min before each remaining class today\n"
+        "• /tomorrow – tomorrow’s timetable\n"
+        "• /week – week at a glance\n"
+        "• /announce <msg> – admin broadcast\n"
+        "• /setgroup <name> – change your group\n"
+        "• /help – this help"
     )
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
@@ -241,7 +240,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "where is the class" in text:
         await where_is_class(update, context)
     elif "who is the developer" in text:
-        await update.message.reply_text(DEVELOPER_TEXT)
+        await update.message.reply_text(DEVELOPER_TEXT, parse_mode=ParseMode.MARKDOWN)
     else:
         await update.message.reply_text("Please use the provided buttons or /help.")
 
@@ -257,77 +256,83 @@ async def where_is_class(update: Update, context: ContextTypes.DEFAULT_TYPE):
         nxt = next_class(group, now)
         if nxt:
             when, entry = nxt
-            await update.message.reply_text(f"Sunday: No classes.\nNext class {when.strftime('%a %H:%M')} – {format_entry(entry)}")
+            msg = f"Sunday: No classes.\n\n*Next:* {when.strftime('%a %H:%M')}\n{pretty_entry(entry)}"
         else:
-            await update.message.reply_text("Sunday: No classes.")
+            msg = "Sunday: No classes."
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # Before first slot (including 09:00–09:30): do not say closed; show first class instead
+    # Before first slot (incl. 09:00–09:30): don’t say closed; show first class
     first_start = SLOTS[0][0]
     if now.timetz() < first_start:
-        nxt = next_class(group, now)
-        if nxt:
-            when, entry = nxt
-            await update.message.reply_text(f"First class {when.strftime('%H:%M')} – {format_entry(entry)}")
-        else:
-            await update.message.reply_text("No classes found today.")
+        when, entry = next_class(group, now)
+        msg = f"*First class {when.strftime('%H:%M')}*\n{pretty_entry(entry)}"
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # Lunch window message + show next class
+    # Lunch window → show next class
     if LUNCH_FROM <= now.timetz() < LUNCH_TO:
         nxt = next_class(group, now)
         if nxt:
             when, entry = nxt
-            await update.message.reply_text(f"It's lunch (13:30–14:30).\nNext class {when.strftime('%H:%M')} – {format_entry(entry)}")
+            msg = f"🍴 *Lunch (13:30–14:30)*\n\n*Next {when.strftime('%H:%M')}*\n{pretty_entry(entry)}"
         else:
-            await update.message.reply_text("It's lunch (13:30–14:30). No more classes today.")
+            msg = "🍴 *Lunch (13:30–14:30)*\n\nNo more classes today."
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # After last slot: tell next day’s first class
+    # After last slot → next day
     if now.timetz() >= SLOTS[-1][1]:
         nxt = next_class(group, now)
         if nxt:
             when, entry = nxt
-            await update.message.reply_text(f"No more classes today.\nNext class {when.strftime('%a %H:%M')} – {format_entry(entry)}")
+            msg = f"No more classes today.\n\n*Next:* {when.strftime('%a %H:%M')}\n{pretty_entry(entry)}"
         else:
-            await update.message.reply_text("No more classes today.")
+            msg = "No more classes today."
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # Within slot or between slots: try current, else next
+    # Within slot or between slots
     cur = current_class(group, now)
     if cur:
         idx = slot_index_for(now)
         start, end = SLOTS[idx]
-        await update.message.reply_text(f"Current ({start.strftime('%H:%M')}–{end.strftime('%H:%M')}):\n{format_entry(cur)}")
+        msg = f"*Current* {pretty_slot_label(start, end)}\n{pretty_entry(cur)}"
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
     else:
         nxt = next_class(group, now)
         if nxt:
             when, entry = nxt
-            await update.message.reply_text(f"Next class {when.strftime('%H:%M')} – {format_entry(entry)}")
+            msg = f"*Next {when.strftime('%H:%M')}*\n{pretty_entry(entry)}"
         else:
-            await update.message.reply_text("No class right now.")
+            msg = "No class right now."
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
 async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
     group = USER_GROUP.get(update.effective_user.id, "Group-7")
     d = ist_now().weekday()
-    await update.message.reply_text(f"Today's schedule for {group}:\n" + day_schedule(group, d))
+    text = f"*Today’s schedule for {group}:*\n\n" + day_schedule(group, d)
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 async def tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
     group = USER_GROUP.get(update.effective_user.id, "Group-7")
     d = (ist_now().weekday() + 1) % 7
-    await update.message.reply_text(f"Tomorrow's schedule for {group}:\n" + day_schedule(group, d))
+    text = f"*Tomorrow’s schedule for {group}:*\n\n" + day_schedule(group, d)
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 async def week(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
     group = USER_GROUP.get(update.effective_user.id, "Group-7")
-    msg = []
+    labels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    parts: List[str] = []
     for d in range(7):
-        label = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][d]
-        msg.append(f"\n*{label}*")
-        msg.append(day_schedule(group, d))
-    await update.message.reply_text("\n".join(msg))
+        parts.append(f"*{labels[d]}*")
+        parts.append(day_schedule(group, d))
+        if d < 6:
+            parts.append("")  # extra blank line between days
+    await update.message.reply_text("\n".join(parts), parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
 async def next_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await _remember_chat(update)
@@ -337,10 +342,11 @@ async def next_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("No upcoming classes found.")
         return
     when, entry = nxt
-    await update.message.reply_text(f"Next class at {when.strftime('%a %H:%M')} – {format_entry(entry)}")
+    msg = f"*Next class* {when.strftime('%a %H:%M')}\n{pretty_entry(entry)}"
+    await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
 async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Schedules one-off reminders 10 minutes before each remaining class today (robust across lunch & gaps)."""
+    """Schedules one-off reminders 10 minutes before each remaining class today."""
     await _remember_chat(update)
     user_id = update.effective_user.id
     group = USER_GROUP.get(user_id, "Group-7")
@@ -366,7 +372,10 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         jobs += 1
     if jobs:
-        await update.message.reply_text(f"Subscribed: I'll remind you 10 minutes before {jobs} class(es) today.")
+        await update.message.reply_text(
+            f"✅ Subscribed: I’ll remind you *10 minutes before* {jobs} class(es) today.",
+            parse_mode=ParseMode.MARKDOWN
+        )
     else:
         await update.message.reply_text("No remaining classes to remind you about today.")
 
@@ -376,7 +385,8 @@ async def reminder_job(context: CallbackContext):
     slot_label = data["slot"]
     await context.bot.send_message(
         chat_id=data["chat_id"],
-        text=f"⏰ Reminder ({slot_label}): {format_entry(entry)}",
+        text=f"⏰ *Reminder* ({slot_label})\n{pretty_entry(entry)}",
+        parse_mode=ParseMode.MARKDOWN,
     )
 
 # ------------- Admin Broadcast -------------
@@ -399,5 +409,3 @@ async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
     await update.message.reply_text(f"Announcement sent to {sent} chat(s).")
-
-
