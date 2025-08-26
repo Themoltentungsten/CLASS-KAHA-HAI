@@ -104,7 +104,7 @@ FACULTY = {
 DEVELOPER_TEXT = (
     "Developer: @Moltentungsten (Yash Kumar Raut)\n"
     "Timetable: CVRGU, Group-7, Sem-5.\n"
-    "Dept. Coordinator: Dr. B.N. Behera;\n"
+    "Dept. Coordinator: Dr. B.N. Behera.\n"
     "University Coordinator: Dr. G. Mohanta."
 )
 
@@ -399,4 +399,5 @@ async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
     await update.message.reply_text(f"Announcement sent to {sent} chat(s).")
+
 
