@@ -205,7 +205,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Welcome! You are registered under Group-7.\n"
         "Use the buttons below or commands:\n"
-        "/today • /next • /subscribe • /announce (admin) • /tomorrow • /week • /setgroup • /help",
+        "• /today\n • /next\n • /subscribe\n • /announce (admin)\n • /tomorrow\n • /week\n • /setgroup\n • /help",
         reply_markup=MAIN_KEYBOARD
     )
 
@@ -399,3 +399,4 @@ async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
     await update.message.reply_text(f"Announcement sent to {sent} chat(s).")
+
