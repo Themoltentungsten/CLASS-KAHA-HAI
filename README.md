@@ -1,95 +1,82 @@
-# 🤖 Class Kaha Hai – Telegram Bot  
+# CLASS-KAHA-HAI
 
-![Bot Logo](ClassKahaHai.png)
 
-A smart **Telegram bot** built for **CVRGU Group-7 (Sem 5)** students to easily check their class schedule, get reminders, and stay updated with announcements.  
-Deployed on **Render** for 24/7 availability.  
+📚 A Telegram bot for CVRGU students to check timetables, get class reminders, and receive admin announcements — built with Python & python-telegram-bot, deployed on Render.
 
----
+> Default branch: **main** · Topics: —
 
-## ✨ Features
-- 📅 **Timetable Lookup**  
-  - `/today` – view today’s full schedule  
-  - `/tomorrow` – check tomorrow’s classes  
-  - `/week` – see the entire week in one view  
+[![last commit](https://img.shields.io/github/last-commit/Themoltentungsten/CLASS-KAHA-HAI?label=last%20commit)](https://github.com/Themoltentungsten/CLASS-KAHA-HAI/commits) ![languages](https://img.shields.io/github/languages/count/Themoltentungsten/CLASS-KAHA-HAI) ![top language](https://img.shields.io/github/languages/top/Themoltentungsten/CLASS-KAHA-HAI) ![license](https://img.shields.io/github/license/Themoltentungsten/CLASS-KAHA-HAI) ![stars](https://img.shields.io/github/stars/Themoltentungsten/CLASS-KAHA-HAI) ![issues](https://img.shields.io/github/issues/Themoltentungsten/CLASS-KAHA-HAI)
 
-- ⏰ **Reminders**  
-  - `/subscribe` – get notified **10 minutes before each class**  
+**Built with the tools and technologies:**
 
-- 🔎 **Quick Info**  
-  - `Where is the class?` – tells you the current/next class with room & faculty  
-  - `Who is the developer?` – credits & info  
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
 
-- 📢 **Admin Announcements**  
-  - `/announce <message>` – broadcast updates to all registered chats (admin only)  
+## Table of Contents
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Testing](#testing)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [License](#license)
+- [Contact](#contact)
 
-- 🕒 Handles special cases:  
-  - Before 9:30 → shows first class (not "closed")  
-  - Lunch (13:30–14:30) → shows lunch + next class  
-  - After 17:30 → shows next day’s class  
+## Overview
+📚 A Telegram bot for CVRGU students to check timetables, get class reminders, and receive admin announcements — built with Python & python-telegram-bot, deployed on Render.
 
----
+**Why this repo?**  
+This README was generated to provide a clean, professional documentation template similar to premium open‑source projects. It includes dynamic badges, a clear structure, and ready‑to‑use sections.
 
-## 🛠 Tech Stack
-- **Language:** Python 3.10+  
-- **Framework:** [python-telegram-bot 21.x](https://docs.python-telegram-bot.org/)  
-- **Server:** aiohttp (async webhook server)  
-- **Hosting:** [Render](https://render.com) (free tier with uptime pinger)  
-- **Scheduler:** PTB JobQueue for reminders  
-- **Monitoring:** UptimeRobot / Cron-job.org  
+**Key highlights**
+- Webhook-friendly sections and clean anchors
+- Dynamic GitHub badges for activity and quality stats
+- Auto-detected languages and tech badges
+- Copy‑pastable install, run and test commands
 
----
+**Languages (auto‑detected)**
+- **Python** — 100.0%
 
-## 🚀 Getting Started
+## Getting Started
 
-### 1. Clone the Repo
+### Prerequisites
+- Git
+- Python 3.9+ and pip
+- 
+
+### Installation
 ```bash
-git clone https://github.com/<your-username>/Class-Kaha-Hai.git
-cd Class-Kaha-Hai
+git clone https://github.com/Themoltentungsten/CLASS-KAHA-HAI.git
+cd CLASS-KAHA-HAI
+python -m venv .venv
+source .venv/bin/activate  # on Windows: .venv\Scripts\activate
+pip install -r requirements.txt  # if present
 ```
 
-### 2. Install Requirements
+### Usage
 ```bash
-pip install -r requirements.txt
+python main.py  # or the entry point for your app
 ```
 
-### 3. Set Environment Variables
-Create a `.env` file or use Render dashboard:  
-```env
-TELEGRAM_BOT_TOKEN=your_botfather_token_here
-WEBHOOK_URL=https://<your-service>.onrender.com/webhook
-```
-
-### 4. Run Locally
-For quick test with polling:
+### Testing
 ```bash
-python main.py
+pytest -q  # if you use pytest
 ```
 
-For production webhook (Render):
-```bash
-python webhook_main.py
-```
 
----
+## Contributing
+Contributions are welcome! Fork the repo and open a pull request with a clear description of your changes. Please keep commits focused and small.
 
-## 📸 Demo
-- Start chat with the bot: [@YourBotUsername](https://t.me/YourBotUsername)  
-- Example commands:  
+## Roadmap
+- [ ] Improve docs
+- [ ] Add CI
+- [ ] Expand examples
 
-```
-/today
-/next
-/subscribe
-```
+## License
+UNLICENSED
 
----
+## Contact
+Maintainer: @Themoltentungsten  
+Project Link: https://github.com/Themoltentungsten/CLASS-KAHA-HAI
 
-## 👨‍💻 Developer
-- Built by **Yash Kumar Raut (@Moltentungsten)**  
-- CVRGU Group-7 timetable automation project  
-
----
-
-## 📜 License
-MIT License – free to use, modify, and share.  
