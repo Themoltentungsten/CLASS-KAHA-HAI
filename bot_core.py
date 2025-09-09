@@ -65,9 +65,9 @@ SCHEDULE: Dict[int, List[Optional[ClassEntry]]] = {
         ClassEntry("SDE", "Chutti"),
         ClassEntry("SDE", "Chutti"),
         None,
-        ClassEntry("CDT", "Chutti"),
-        ClassEntry("CDT", "Chutti"),
-        ClassEntry("CDT", "Chutti"),
+        ClassEntry("CDT", "7A-ME-205,7B-EE-302"),
+        ClassEntry("CDT", "7A-ME-205,7B-EE-302"),
+        ClassEntry("CDT", "7A-ME-205,7B-EE-302"),
     ],
     3: [  # THU
         ClassEntry("WT", "Oracle Lab"),
@@ -409,5 +409,6 @@ async def announce(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
     await update.message.reply_text(f"Announcement sent to {sent} chat(s).")
+
 
 
